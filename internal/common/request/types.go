@@ -14,3 +14,7 @@ type CreateRequest struct {
 	TTL           int           `json:"ttl"`     // 단위: 초
 	Volumes       []string      `json:"volumes"` // 호스트 디렉토리 바인딩
 }
+
+type DeleteRequest struct {
+	ContainerId string `json:"container_id"` // 컨테이너 ID
+}
