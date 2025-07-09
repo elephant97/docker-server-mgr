@@ -1,17 +1,14 @@
-package server
+package container
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
 
-	"github.com/docker/docker/client"
-	"github.com/redis/go-redis/v9"
-
+	"docker-server-mgr/internal/appctx"
 	"docker-server-mgr/internal/common/request"
 	"docker-server-mgr/internal/common/response"
 	"docker-server-mgr/internal/dockerops"
@@ -19,36 +16,27 @@ import (
 	"docker-server-mgr/internal/redisops"
 )
 
-func StartCreateListener(dockerClient *client.Client, redisClient *redis.Client, mysqlClient *sql.DB) {
-	http.HandleFunc("/create", func(w http.ResponseWriter, r *http.Request) {
+func CreateHandler(deps *appctx.Dependencies) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		var req request.CreateRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "Invalid request", http.StatusBadRequest)
 			return
 		}
 
-		result, status, err := handleCreateRequest(context.Background(), dockerClient, mysqlClient, redisClient, req)
+		containerID, status, err := handleCreateRequest(context.Background(), deps, req)
 		if err != nil {
 			response.WriteResponse(w, status, err.Error())
 			return
 		}
 
-		response.WriteResponse(w, status, map[string]string{
-			"container_id": result})
-	})
-
-	log.Println("Listening on :8082")
-	if err := http.ListenAndServe(":8082", nil); err != nil {
-		log.Fatalf("Server failed: %v", err)
+		response.WriteResponse(w, status, map[string]string{"container_id": containerID})
 	}
-
 }
 
 func handleCreateRequest(
 	ctx context.Context,
-	dockerClient *client.Client,
-	mysqlClient *sql.DB,
-	redisClient *redis.Client,
+	deps *appctx.Dependencies,
 	req request.CreateRequest,
 ) (string, int, error) {
 	exposed, bindings, err := dockerops.BuildPortConfig(req.Ports)
@@ -62,37 +50,37 @@ func handleCreateRequest(
 	}
 	fullImage := fmt.Sprintf("%s:%s", req.Image, tag)
 
-	if err := dockerops.PrepareImage(dockerClient, ctx, fullImage); err != nil {
+	if err := dockerops.PrepareImage(deps.DockerClient, ctx, fullImage); err != nil {
 		return "", http.StatusBadRequest, fmt.Errorf("image prepare error: %w", err)
 	}
 
-	containerID, err := dockerops.CreateContainer(ctx, dockerClient, fullImage, req, exposed, bindings)
+	containerID, err := dockerops.CreateContainer(ctx, deps.DockerClient, fullImage, req, exposed, bindings)
 	if err != nil {
-		failCreateTask(ctx, dockerClient, mysqlClient, redisClient, containerID)
+		failCreateTask(ctx, deps, containerID)
 		return "", http.StatusBadRequest, fmt.Errorf("create error[%s]: %w", containerID, err)
 	}
 
 	log.Printf("Container created: %s", containerID)
 
-	tx, err := mysqlClient.Begin()
+	tx, err := deps.MySQLClient.Begin()
 	if err != nil {
-		failCreateTask(ctx, dockerClient, mysqlClient, redisClient, containerID)
+		failCreateTask(ctx, deps, containerID)
 		return "", http.StatusForbidden, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	_, err = mysqlops.ExecQuery(mysqlClient, "INSERT INTO containers (id, container_name, image, tag, ttl) VALUES (?, ?, ?, ?, ?)",
+	_, err = mysqlops.ExecQuery(deps.MySQLClient, "INSERT INTO containers (id, container_name, image, tag, ttl) VALUES (?, ?, ?, ?, ?)",
 		containerID, req.ContainerName, req.Image, tag, req.TTL)
 	if err != nil {
-		failCreateTask(ctx, dockerClient, mysqlClient, redisClient, containerID)
+		failCreateTask(ctx, deps, containerID)
 		return "", http.StatusForbidden, fmt.Errorf("mysql insert error: %w", err)
 	}
 
 	for _, port := range req.Ports {
-		_, err := mysqlops.ExecQuery(mysqlClient,
+		_, err := mysqlops.ExecQuery(deps.MySQLClient,
 			"INSERT INTO container_ports (container_id, host_port, container_port) VALUES (?, ?, ?)",
 			containerID, port.HostPort, port.ContainerPort)
 		if err != nil {
-			failCreateTask(ctx, dockerClient, mysqlClient, redisClient, containerID)
+			failCreateTask(ctx, deps, containerID)
 			tx.Rollback()
 			return "", http.StatusForbidden, fmt.Errorf("failed to insert port mapping: %v", err)
 		}
@@ -103,9 +91,9 @@ func handleCreateRequest(
 	}
 
 	if req.TTL > 0 {
-		err = redisops.RegisterContainerTTL(ctx, redisClient, containerID, time.Duration(req.TTL)*time.Second)
+		err = redisops.RegisterContainerTTL(ctx, deps.RedisClient, containerID, time.Duration(req.TTL)*time.Second)
 		if err != nil {
-			failCreateTask(ctx, dockerClient, mysqlClient, redisClient, containerID)
+			failCreateTask(ctx, deps, containerID)
 			tx.Rollback()
 			return "", http.StatusForbidden, fmt.Errorf("redis TTL register error: %w", err)
 		}
@@ -118,11 +106,9 @@ func handleCreateRequest(
 
 func failCreateTask(
 	ctx context.Context,
-	dockerClient *client.Client,
-	mysqlClient *sql.DB,
-	redisClient *redis.Client,
+	deps *appctx.Dependencies,
 	containerID string,
 ) {
 	// 항상 컨테이너 제거
-	dockerops.RemoveContainer(ctx, dockerClient, mysqlClient, redisClient, containerID)
+	dockerops.RemoveContainer(ctx, deps, containerID)
 }

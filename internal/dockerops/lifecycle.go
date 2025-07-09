@@ -11,7 +11,7 @@ import (
 	"docker-server-mgr/internal/mysqlops"
 )
 
-func WatchDockerLifecycle(
+func WatchDockerStatus(
 	ctx context.Context,
 	dockerClient *client.Client,
 	mysqlClient *sql.DB,
