@@ -25,8 +25,14 @@ func SubscribeExpiredKeys(ctx context.Context, rdb *redis.Client, handler func(c
 				return
 			}
 			key := msg.Payload
+
 			if strings.HasPrefix(key, "container:") {
 				id := strings.TrimPrefix(key, "container:")
+				if id == "" {
+					log.Println("Received invalid container ID from Redis")
+					continue
+				}
+				log.Printf("Container expired: %s\n", id)
 				handler(id)
 			}
 		}

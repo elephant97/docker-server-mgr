@@ -3,10 +3,10 @@ package dockerops
 import (
 	"context"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 
 	"docker-server-mgr/internal/appctx"
 	"docker-server-mgr/internal/mysqlops"
@@ -25,11 +25,15 @@ func RemoveContainer(
 		Force: true, // 강제 삭제 (실행 중이어도 삭제)
 	})
 	if err != nil {
-		log.Printf("Failed to remove container %s: %v", containerID, err)
-		redisops.RegisterContainerTTL(ctx, deps.RedisClient, containerID, 10*time.Second) // Redis에 TTL 10으로 등록하고 다음에 재시도
-		return                                                                            // 에러가 발생하면 로그에 남기고 종료
-	} else if client.IsErrNotFound(err) {
-		log.Printf("Notfound container %s: %v", containerID, err)
+		if strings.Contains(err.Error(), "No such container") {
+			log.Printf("Notfound container %s: %v", containerID, err)
+			return
+		} else {
+			log.Printf("Failed to remove container %s: %v", containerID, err)
+			redisops.RegisterContainerTTL(ctx, deps.RedisClient, containerID, 10*time.Second) // Redis에 TTL 10으로 등록하고 다음에 재시도
+			return                                                                            // 에러가 발생하면 로그에 남기고 종료
+		}
+
 	} else {
 		log.Printf("Container %s removed successfully", containerID)
 	}
