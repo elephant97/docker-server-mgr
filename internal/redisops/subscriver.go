@@ -14,13 +14,21 @@ func SubscribeExpiredKeys(ctx context.Context, rdb *redis.Client, handler func(c
 
 	log.Println("Subscribed to Redis expiration events...")
 
-	go func() {
-		for msg := range ch {
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("Redis subscription cancelled")
+			return
+		case msg, ok := <-ch:
+			if !ok {
+				log.Println("Redis channel closed")
+				return
+			}
 			key := msg.Payload
 			if strings.HasPrefix(key, "container:") {
 				id := strings.TrimPrefix(key, "container:")
 				handler(id)
 			}
 		}
-	}()
+	}
 }
