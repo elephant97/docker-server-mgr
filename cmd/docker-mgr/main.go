@@ -45,7 +45,7 @@ func main() {
 	utils.SafeGoRoutineCtx(ctx, func() {
 		redisops.SubscribeExpiredKeys(ctx, redisClient, func(containerID string) {
 			log.Printf("Expired container detached: %s\n", containerID)
-			go dockerops.RemoveContainer(ctx, deps, containerID)
+			dockerops.RemoveContainer(ctx, deps, containerID)
 		})
 	})
 
