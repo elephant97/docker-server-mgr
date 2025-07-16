@@ -2,13 +2,18 @@ package redisops
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
+
+	"docker-server-mgr/config"
 
 	"github.com/redis/go-redis/v9"
 )
 
-func NewRedisClient(addr string) *redis.Client {
+func NewRedisClient(redisConfig *config.DBConfig) *redis.Client {
+
+	addr := fmt.Sprintf("%s:%d", redisConfig.Host, redisConfig.Port)
 	rdb := redis.NewClient(&redis.Options{
 		Addr: addr,
 	})
