@@ -5,11 +5,20 @@ import (
 	"fmt"
 	"log"
 
+	"docker-server-mgr/config"
+
 	_ "github.com/go-sql-driver/mysql"
 )
 
-func MysqlConnection() (*sql.DB, error) {
-	dsn := "sherpa:sherpa@tcp(128.10.30.70:3306)/sherpa?parseTime=true&allowNativePasswords=true"
+func MysqlConnection(mysqlConfig *config.DBConfig) (*sql.DB, error) {
+	dsn := fmt.Sprintf(
+		"%s:%s@tcp(%s:%d)/%s?parseTime=true&allowNativePasswords=true",
+		mysqlConfig.User,
+		mysqlConfig.Password,
+		mysqlConfig.Host,
+		mysqlConfig.Port,
+		mysqlConfig.Database,
+	)
 
 	// DB 연결
 	db, err := sql.Open("mysql", dsn)

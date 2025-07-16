@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	"docker-server-mgr/config"
 	"docker-server-mgr/internal/appctx"
 	"docker-server-mgr/internal/dockerops"
 	"docker-server-mgr/internal/monitor"
@@ -18,17 +19,22 @@ func main() {
 
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
+	cfg, err := config.LoadConfig("config/config.yaml")
+	if err != nil {
+		log.Fatalf("설정 파일 로딩 실패: %v", err)
+	}
+
 	dockerClient, err := dockerops.NewDockerClient()
 	if err != nil {
 		log.Fatalf("Docker client error: %v", err)
 	}
 
-	mysqlClient, err := mysqlops.MysqlConnection()
+	mysqlClient, err := mysqlops.MysqlConnection(&cfg.MySQL)
 	if err != nil {
 		log.Fatalf("MySQL client error: %v", err)
 	}
 
-	redisClient := redisops.NewRedisClient("128.10.30.70:6379")
+	redisClient := redisops.NewRedisClient(&cfg.Redis)
 
 	deps := &appctx.Dependencies{
 		DockerClient: dockerClient,

@@ -15,7 +15,8 @@ WORKDIR /app
 
 COPY --from=builder /app/docker-mgr .
 
-EXPOSE 8081
+COPY --from=builder /app/config/config.yaml ./config/config.yaml
 
-# ½ÇÇà
+EXPOSE 8082
+
 ENTRYPOINT ["./docker-mgr"]
