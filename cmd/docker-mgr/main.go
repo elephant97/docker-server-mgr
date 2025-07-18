@@ -60,6 +60,11 @@ func main() {
 		monitor.CheckDockerStatus(ctx, deps)
 	})
 
+	// 4. docker 사용중이지 않은 image 관리 thread
+	utils.SafeGoRoutineCtx(ctx, func() {
+		monitor.CheckImageStatus(ctx, deps)
+	})
+
 	// main block
 	select {}
 }

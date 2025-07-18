@@ -13,3 +13,8 @@ type ContainerStatus struct {
 	Name      sql.NullString `db:"container_name"`
 	DeletedAt sql.NullTime   `db:"deleted_at"`
 }
+
+type ImageStatus struct {
+	ID     string         `db:"id"`
+	Status sql.NullString `db:"status"`
+}
