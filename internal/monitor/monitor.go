@@ -44,3 +44,21 @@ func CheckDockerStatus(
 		}
 	}
 }
+
+func CheckImageStatus(
+	ctx context.Context,
+	deps *appctx.Dependencies,
+) {
+	log.Println("Starting Docker CheckImageStatus...")
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("Docker Image Status watcher stopped.")
+			return
+		default:
+			dockerops.WatchImageUsingStatus(ctx, deps.DockerClient, deps.MySQLClient)
+			time.Sleep(60 * time.Second)
+		}
+	}
+}
