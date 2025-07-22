@@ -3,7 +3,6 @@ package dockerops
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"strings"
 
 	shptypes "docker-server-mgr/internal/dockerops/types"
@@ -46,13 +45,13 @@ func WatchImageUsingStatus(
 
 	for _, img := range images {
 		if !usedImageIDs[img.ID] {
-			fmt.Printf("Deleting unused image: %s\n", img.ID[:20])
+			clog.Info("사용하지 않는 이미지 삭제처리", "imageID", img.ID[:20])
 			_, err := dockerClient.ImageRemove(ctx, img.ID, types.ImageRemoveOptions{
 				Force:         false,
 				PruneChildren: false,
 			})
 			if err != nil {
-				fmt.Printf("⚠️ Failed to delete %s: %v\n", img.ID[:20], err)
+				clog.Error("사용하지 않는 이미지 삭제에러 발생", "imageID", img.ID[:20], "err", err)
 			}
 
 			if mapDbImage[img.ID] == "" || mapDbImage[img.ID] != "deleted" {
