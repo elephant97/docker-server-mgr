@@ -3,8 +3,9 @@ package dockerops
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings" //custom log
+
+	clog "docker-server-mgr/utils/log" //custom log
 
 	"github.com/docker/docker/client"
 )
@@ -25,7 +26,7 @@ func GetContainerStatus(
 
 	containerJSON, err := cli.ContainerInspect(ctx, containerID)
 	if err != nil {
-		log.Printf("Error inspecting container %s: %v", containerID, err)
+		clog.Error("Error inspecting container %s: %v", containerID, err)
 		return "", fmt.Errorf("inspect error: %w", err)
 	}
 
@@ -39,11 +40,11 @@ func GetContainerName(
 ) (string, error) {
 	inspect, err := cli.ContainerInspect(ctx, containerID)
 	if err != nil {
-		log.Printf("Error inspecting container %s: %v", containerID, err)
+		clog.Error("Error inspecting container %s: %v", containerID, err)
 		return "", err
 	}
 	name := inspect.Name
-	log.Println("Container name:", strings.TrimPrefix(name, "/"))
+	clog.Info("Container name:", strings.TrimPrefix(name, "/"))
 
 	return strings.TrimPrefix(name, "/"), nil
 }
