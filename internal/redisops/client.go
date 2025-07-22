@@ -22,7 +22,7 @@ func NewRedisClient(redisConfig *config.DBConfig) *redis.Client {
 	defer cancel()
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
-		clog.Fatal("❌ Redis 연결 실패: %v", err)
+		clog.Fatal("❌ Redis 연결 실패", "err", err)
 	}
 
 	clog.Debug("✅ Redis 연결 성공")

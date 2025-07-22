@@ -50,7 +50,7 @@ func PrepareImage(cli *client.Client, ctx context.Context, image string) error {
 	}
 
 	if !imageExists {
-		clog.Debug("Image %s not found locally. Pulling...", image)
+		clog.Debug("Image not found locally. Pulling...", "image", image)
 
 		reader, err := cli.ImagePull(ctx, image, types.ImagePullOptions{})
 		if err != nil {
@@ -58,7 +58,7 @@ func PrepareImage(cli *client.Client, ctx context.Context, image string) error {
 		}
 		defer reader.Close()
 		io.Copy(io.Discard, reader)
-		clog.Debug("Image %s pulled successfully", image)
+		clog.Debug("Image pulled successfully", "image", image)
 	}
 
 	return nil

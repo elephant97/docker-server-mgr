@@ -16,6 +16,6 @@ func StartHTTPServer(ctx context.Context, deps *appctx.Dependencies) {
 
 	clog.Debug("Listening on :8082")
 	if err := http.ListenAndServe(":8082", mux); err != nil {
-		clog.Fatal("Server failed: %v", err)
+		clog.Fatal("Server failed", "err", err)
 	}
 }

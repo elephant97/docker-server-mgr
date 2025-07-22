@@ -26,7 +26,7 @@ func CheckDockerStatus(
 		default:
 			containers, err := mysqlops.SelectQueryRowsToStructs[types.ContainerInfo](deps.MySQLClient, "SELECT id, status FROM containers WHERE deleted_at IS NULL or status != 'deleted'")
 			if err != nil {
-				clog.Error("Error fetching containers from MySQL: %v", err)
+				clog.Error("Error fetching containers from MySQL", "err", err)
 				time.Sleep(10 * time.Second)
 				continue
 			}

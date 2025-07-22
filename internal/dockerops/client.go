@@ -26,7 +26,7 @@ func GetContainerStatus(
 
 	containerJSON, err := cli.ContainerInspect(ctx, containerID)
 	if err != nil {
-		clog.Error("Error inspecting container %s: %v", containerID, err)
+		clog.Error("Error inspecting container", "containerID", containerID, "err", err)
 		return "", fmt.Errorf("inspect error: %w", err)
 	}
 
@@ -40,11 +40,11 @@ func GetContainerName(
 ) (string, error) {
 	inspect, err := cli.ContainerInspect(ctx, containerID)
 	if err != nil {
-		clog.Error("Error inspecting container %s: %v", containerID, err)
+		clog.Error("Error inspecting container", "containerID", containerID, "err", err)
 		return "", err
 	}
 	name := inspect.Name
-	clog.Info("Container name:", strings.TrimPrefix(name, "/"))
+	clog.Info("Container name", "conatainerName", strings.TrimPrefix(name, "/"))
 
 	return strings.TrimPrefix(name, "/"), nil
 }

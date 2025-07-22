@@ -21,17 +21,17 @@ func main() {
 
 	cfg, err := config.LoadConfig("config/config.yaml")
 	if err != nil {
-		clog.Fatal("설정 파일 로딩 실패: %v", err)
+		clog.Fatal("설정 파일 로딩 실패", "err", err)
 	}
 
 	dockerClient, err := dockerops.NewDockerClient()
 	if err != nil {
-		clog.Fatal("Docker client error: %v", err)
+		clog.Fatal("Docker client error", "err", err)
 	}
 
 	mysqlClient, err := mysqlops.MysqlConnection(&cfg.MySQL)
 	if err != nil {
-		clog.Fatal("MySQL client error: %v", err)
+		clog.Fatal("MySQL client error", "err", err)
 	}
 
 	redisClient := redisops.NewRedisClient(&cfg.Redis)
@@ -50,7 +50,7 @@ func main() {
 	// Redis docker container TTL 만료 감시 thread
 	utils.SafeGoRoutineCtx(ctx, func() {
 		redisops.SubscribeExpiredKeys(ctx, redisClient, func(containerID string) {
-			clog.Info("Expired container detached: %s\n", containerID)
+			clog.Info("Expired container detached", "containerID", containerID)
 			dockerops.RemoveContainer(ctx, deps, containerID)
 		})
 	})

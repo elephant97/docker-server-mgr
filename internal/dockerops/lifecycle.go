@@ -22,7 +22,7 @@ func WatchDockerStatus(
 	// Check for container status changes
 	containers, err := dockerClient.ContainerList(ctx, types.ContainerListOptions{All: true})
 	if err != nil {
-		clog.Error("Error listing containers: %v", err)
+		clog.Error("Error listing containers", "err", err)
 	}
 
 	dockerIDs := compareUserAndDockerContainers(ctx, containers, userContainers)
@@ -30,31 +30,37 @@ func WatchDockerStatus(
 	for _, container := range containers {
 		status, err := GetContainerStatus(ctx, dockerClient, container.ID)
 		if err != nil {
-			clog.Error("Error getting status for container %s: %v", container.ID, err)
+			clog.Error("Error getting status for container",
+				"containerID", container.ID,
+				"error", err)
 		}
 
 		if _, exists := userContainers[container.ID]; !exists {
-			clog.Warn("⚠️ 나중에는 삭제 처리 할 등록안된 컨테이너 :%s", container.ID) //TODO
+			clog.Warn("⚠️ 등록 안 된 컨테이너 추후 삭제 예정", "containerID", container.ID) //TODO
 			continue
 		}
 
 		if userContainers[container.ID] != status {
-			clog.Info("Container status changed: %s from %s to %s", container.ID, userContainers[container.ID], status)
+			clog.Info("Container status changed",
+				"containerID", container.ID,
+				"from", userContainers[container.ID],
+				"to", status,
+			)
 			updateConatinerStatus(mysqlClient, container.ID, status)
 		}
 
 		if status == "exited" || status == "dead" {
-			clog.Info("Container %s has exited or is dead. Removing...", container.ID)
+			clog.Info("Container has exited or is dead. Removing...", "containerID", container.ID)
 			// go RemoveContainer(ctx, dockerClient, container.ID)
 		}
 	}
 
 	for containerId := range userContainers {
 		if _, exists := dockerIDs[containerId]; !exists {
-			clog.Info("🗑️ Docker에서 사라진 컨테이너 감지됨: %s → deleted 처리", containerId)
+			clog.Info("🗑️ Docker에서 사라진 컨테이너 감지됨 deleted 처리", "containerId", containerId)
 			_, err := mysqlops.ExecQuery(mysqlClient, "UPDATE containers SET status = 'deleted', last_check_time = NOW(), deleted_at = NOW() WHERE id = ?", containerId)
 			if err != nil {
-				clog.Error("❌ DB 삭제 마킹 실패: %s, error: %v", containerId, err)
+				clog.Error("❌ DB 삭제 마킹 실패", "containerId", containerId, "err", err)
 			}
 		}
 	}
@@ -63,15 +69,15 @@ func WatchDockerStatus(
 
 func updateConatinerStatus(mysqlClient *sql.DB,
 	containerID string, status string) {
-	clog.Debug("Updating container %s status to %s", containerID, status)
+	clog.Debug("Updating container status", "containerID", containerID, "status", status)
 
 	_, err := mysqlops.ExecQuery(mysqlClient, "UPDATE containers SET status = ?, last_check_time = NOW() WHERE id = ?",
 		status, containerID)
 
 	if err != nil {
-		clog.Error("Error updating container status in MySQL: %v", err)
+		clog.Error("Error updating container status in MySQL", "err", err)
 	} else {
-		clog.Info("Container %s status updated to %s successfully", containerID, status)
+		clog.Info("Container status updated successfully", "containerID", containerID, "status", status)
 	}
 }
 

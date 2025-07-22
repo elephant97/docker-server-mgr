@@ -33,7 +33,7 @@ func SubscribeExpiredKeys(ctx context.Context, rdb *redis.Client, handler func(c
 					clog.Warn("Received invalid container ID from Redis")
 					continue
 				}
-				clog.Info("Container expired: %s\n", id)
+				clog.Info("Container expired", "containerID", id)
 				handler(id)
 			}
 		}

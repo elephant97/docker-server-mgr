@@ -23,14 +23,14 @@ func CreateHandler(deps *appctx.Dependencies) http.HandlerFunc {
 		var req request.CreateRequest
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			clog.Error("Validation request: %v", err)
+			clog.Error("Validation request", "err", err)
 			response.WriteResponse(w, http.StatusBadRequest, "Invalid request")
 			return
 		}
 
 		errdefs := validateCreateRequest(&req)
 		if errdefs.Code != 0 && errdefs.Code != int(errs.DefaultSet) {
-			clog.Error("Validation error: %v", errdefs.Message)
+			clog.Error("Validation error", "err", errdefs.Message)
 			response.WriteResponse(w, http.StatusBadRequest, errdefs.Message.Error())
 			return
 		}
@@ -102,7 +102,7 @@ func handleCreateRequest(
 		return "", http.StatusBadRequest, fmt.Errorf("create error[%s]: %w", containerID, err)
 	}
 
-	clog.Info("Container created: %s", containerID)
+	clog.Info("Container created", "containerID", containerID)
 
 	status, err := dockerops.GetContainerStatus(ctx, deps.DockerClient, containerID)
 	if err != nil {
@@ -150,7 +150,7 @@ func handleCreateRequest(
 		}
 	}
 
-	clog.Info("Container %s created and registered successfully", containerID)
+	clog.Info("Container created and registered successfully", "containerID", containerID)
 
 	return containerID, http.StatusOK, nil
 }

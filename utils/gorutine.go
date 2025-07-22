@@ -25,7 +25,7 @@ func SafeGoRoutineCtx(ctx context.Context, f func()) {
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
-						clog.Error("Recovered from panic: %v", r)
+						clog.Error("Recovered from panic", "err", r)
 					}
 				}()
 				// 실제 작업 함수

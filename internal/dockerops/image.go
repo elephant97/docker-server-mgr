@@ -23,13 +23,13 @@ func WatchImageUsingStatus(
 
 	mapDbImage, err := getSavedImageInfo(mysqlClient)
 	if mapDbImage == nil {
-		clog.Error("getSavedImageInfo failed: %v", err)
+		clog.Error("getSavedImageInfo failed", "err", err)
 		panic(err)
 	}
 
 	containers, err := dockerClient.ContainerList(ctx, types.ContainerListOptions{All: true})
 	if err != nil {
-		clog.Error("Error listing containers: %v", err)
+		clog.Error("Error listing containers", "err", err)
 		panic(err)
 	}
 
@@ -40,7 +40,7 @@ func WatchImageUsingStatus(
 
 	images, err := dockerClient.ImageList(ctx, types.ImageListOptions{All: true})
 	if err != nil {
-		clog.Error("Error get ImageList: %v", err)
+		clog.Error("Error get ImageList", "err", err)
 		panic(err)
 	}
 
@@ -72,7 +72,7 @@ func getSavedImageInfo(
 	dbImageList, err := mysqlops.SelectQueryRowsToStructs[shptypes.ImageStatus](mysqlClient,
 		"SELECT id, status FROM images")
 	if err != nil {
-		clog.Error("⚠️ Failed get Image Info in DB %v\n", err)
+		clog.Error("⚠️ Failed get Image Info in DB", "err", err)
 		return nil, err
 	}
 	imageMap := make(map[string]string)
@@ -97,7 +97,7 @@ func imageStatusUpdate(
 			imageTag := parts[1]
 			upsertImageStatus(mysqlClient, imageID, imageName, imageTag, status)
 		} else {
-			clog.Warn("repo Tag split count is %d", len(parts))
+			clog.Warn("repo Tag split count is over or lower then 2", "len", len(parts))
 		}
 	}
 }
@@ -120,8 +120,8 @@ func upsertImageStatus(
 		imageID, status, imageName, imageTag)
 
 	if err != nil {
-		clog.Error("Error upsert container status in MySQL: %v", err)
+		clog.Error("Error upsert container status in MySQL", "err", err)
 	} else {
-		clog.Debug("Image %s status upsert to %s successfully", imageID, status)
+		clog.Debug("Image status upsert successfully", "imageId", imageID, "status", status)
 	}
 }

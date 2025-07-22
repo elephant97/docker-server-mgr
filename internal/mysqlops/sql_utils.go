@@ -16,7 +16,7 @@ func ExecQuery(db *sql.DB, query string, args ...interface{}) (sql.Result, error
 
 	result, err := db.Exec(query, args...)
 	if err != nil {
-		clog.Error("Query execution failed: %s, args: %v, error: %v", query, args, err)
+		clog.Error("Query execution failed", "query", query, "args", args, "err", err)
 		return nil, fmt.Errorf("query execution failed: %w", err)
 	}
 
@@ -34,14 +34,14 @@ func ExecQuery(db *sql.DB, query string, args ...interface{}) (sql.Result, error
 func SelectQueryRowsToStructs[T any](db *sql.DB, query string, args ...interface{}) ([]T, error) {
 	rows, err := db.Query(query, args...)
 	if err != nil {
-		clog.Error("Query failed: %s, args: %v, error: %v", query, args, err)
+		clog.Error("Query failed", "query", query, "args", args, "err", err)
 		return nil, err
 	}
 	defer rows.Close()
 
 	columns, err := rows.Columns()
 	if err != nil {
-		clog.Error("Failed to get columns: %s, args: %v, error: %v", query, args, err)
+		clog.Error("Failed to get columns", "query", query, "args", args, "err", err)
 		return nil, err
 	}
 
