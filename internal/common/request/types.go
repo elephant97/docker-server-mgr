@@ -19,3 +19,11 @@ type CreateRequest struct {
 type DeleteRequest struct {
 	ContainerId string `json:"container_id"` // 컨테이너 ID
 }
+
+type StopRequest struct {
+	ContainerId string `json:"container_id"` // 컨테이너 ID
+}
+
+type StartRequest struct {
+	ContainerId string `json:"container_id"` // 컨테이너 ID
+}
