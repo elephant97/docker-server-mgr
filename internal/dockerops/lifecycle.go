@@ -7,6 +7,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 
+	dtypes "docker-server-mgr/internal/dockerops/types"
 	"docker-server-mgr/internal/mysqlops"
 	clog "docker-server-mgr/utils/log" //custom log
 )
@@ -37,6 +38,17 @@ func WatchDockerStatus(
 
 		if _, exists := userContainers[container.ID]; !exists {
 			clog.Warn("⚠️ 등록 안 된 컨테이너 추후 삭제 예정", "containerID", container.ID) //TODO
+			containerAllInfo, err := GetContainerAllInfo(ctx, dockerClient, container.ID)
+			if err != nil {
+				clog.Error("unknown Conatiner GetContainerAllInfo failed", "err", err)
+			}
+
+			if err := unknownContainerRegister(mysqlClient, container.ID, containerAllInfo); err != nil {
+				clog.Error("unknown Conatiner Register failed", "err", err)
+			} else {
+				clog.Info("unknown Conatiner Register success")
+			}
+
 			continue
 		}
 
@@ -99,4 +111,28 @@ func compareUserAndDockerContainers(
 	}
 
 	return dockerIDs
+}
+
+func unknownContainerRegister(mysqlClient *sql.DB, containerID string, containerAllInfo dtypes.ContainerAllInfo) error {
+	tx, err := mysqlClient.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = mysqlops.ExecQuery(mysqlClient, "INSERT INTO containers (user_id, id, container_name, image, tag, ttl, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+		1, containerID, containerAllInfo.Name, containerAllInfo.Image, containerAllInfo.Tag, 0, containerAllInfo.Status, containerAllInfo.CreateAt)
+	if err != nil {
+		return err
+	}
+
+	for _, port := range containerAllInfo.Ports {
+		_, err := mysqlops.ExecQuery(mysqlClient,
+			"INSERT INTO container_ports (container_id, host_port, container_port) VALUES (?, ?, ?)",
+			containerID, port.HostPort, port.ContainerPort)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	return nil
 }

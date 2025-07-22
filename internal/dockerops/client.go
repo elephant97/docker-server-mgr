@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings" //custom log
 
+	"docker-server-mgr/internal/dockerops/types"
+	"docker-server-mgr/utils"
 	clog "docker-server-mgr/utils/log" //custom log
 
 	"github.com/docker/docker/client"
@@ -47,4 +49,55 @@ func GetContainerName(
 	clog.Info("Container name", "conatainerName", strings.TrimPrefix(name, "/"))
 
 	return strings.TrimPrefix(name, "/"), nil
+}
+
+func GetContainerAllInfo(
+	ctx context.Context,
+	cli *client.Client,
+	containerID string,
+) (types.ContainerAllInfo, error) {
+	var containerInfo types.ContainerAllInfo
+	inspect, err := cli.ContainerInspect(ctx, containerID)
+	if err != nil {
+		clog.Error("Error inspecting container", "containerID", containerID, "err", err)
+		return containerInfo, err
+	}
+	containerInfo.Name = strings.TrimPrefix(inspect.Name, "/")
+
+	// Status
+	containerInfo.Status = inspect.State.Status
+
+	// CreatedAt
+	containerInfo.CreateAt, err = utils.ConvertRFC3339ToDatetime(inspect.Created)
+	if err != nil {
+		containerInfo.CreateAt = ""
+	}
+
+	// Image & Tag
+	image := inspect.Config.Image // 예: "nginx:latest"
+	split := strings.Split(image, ":")
+	containerInfo.Image = split[0]
+	if len(split) > 1 {
+		if len(split[1]) <= 0 {
+			containerInfo.Tag = "latest"
+		} else {
+			containerInfo.Tag = split[1]
+		}
+	}
+
+	// Ports
+	ports := []types.PortMapping{}
+	for containerPort, bindings := range inspect.NetworkSettings.Ports {
+		for _, binding := range bindings {
+			parts := strings.Split(string(containerPort), "/")
+			port := parts[0]
+			ports = append(ports, types.PortMapping{
+				HostPort:      binding.HostPort,
+				ContainerPort: port,
+			})
+		}
+	}
+	containerInfo.Ports = ports
+
+	return containerInfo, nil
 }

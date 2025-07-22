@@ -18,3 +18,17 @@ type ImageStatus struct {
 	ID     string         `db:"id"`
 	Status sql.NullString `db:"status"`
 }
+
+type ContainerAllInfo struct {
+	Status   string
+	Image    string
+	Tag      string
+	Name     string
+	CreateAt string
+	Ports    []PortMapping
+}
+
+type PortMapping struct {
+	HostPort      string
+	ContainerPort string
+}
