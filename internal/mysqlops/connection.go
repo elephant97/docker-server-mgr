@@ -3,9 +3,10 @@ package mysqlops
 import (
 	"database/sql"
 	"fmt"
-	"log"
 
 	"docker-server-mgr/config"
+
+	clog "docker-server-mgr/utils/log" //custom log
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -31,6 +32,6 @@ func MysqlConnection(mysqlConfig *config.DBConfig) (*sql.DB, error) {
 		return nil, fmt.Errorf("DB Ping 실패: %v", err)
 	}
 
-	log.Println("✅ MySQL 연결 성공")
+	clog.Debug("✅ MySQL 연결 성공")
 	return db, nil
 }

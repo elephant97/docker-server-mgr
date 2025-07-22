@@ -2,10 +2,10 @@ package server
 
 import (
 	"context"
-	"log"
 	"net/http"
 
 	"docker-server-mgr/internal/appctx"
+	clog "docker-server-mgr/utils/log" //custom log
 )
 
 func StartHTTPServer(ctx context.Context, deps *appctx.Dependencies) {
@@ -14,8 +14,8 @@ func StartHTTPServer(ctx context.Context, deps *appctx.Dependencies) {
 
 	RegisterContainerRoutes(mux, deps)
 
-	log.Println("Listening on :8082")
+	clog.Debug("Listening on :8082")
 	if err := http.ListenAndServe(":8082", mux); err != nil {
-		log.Fatalf("Server failed: %v", err)
+		clog.Fatal("Server failed: %v", err)
 	}
 }

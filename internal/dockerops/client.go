@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
+	"strings" //custom log
 
 	"github.com/docker/docker/client"
 )

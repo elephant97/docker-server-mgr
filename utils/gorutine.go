@@ -2,7 +2,8 @@ package utils
 
 import (
 	"context"
-	"log"
+
+	clog "docker-server-mgr/utils/log" //custom log
 	"time"
 )
 
@@ -24,14 +25,14 @@ func SafeGoRoutineCtx(ctx context.Context, f func()) {
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
-						log.Printf("Recovered from panic: %v", r)
+						clog.Error("Recovered from panic: %v", r)
 					}
 				}()
 				// 실제 작업 함수
 				f()
 			}()
 
-			log.Println("SafeGoRoutine: function exited, restarting in 1s...")
+			clog.Error("SafeGoRoutine: function exited, restarting in 1s...")
 			// 재시작 전 잠시 대기
 			select {
 			case <-ctx.Done():
