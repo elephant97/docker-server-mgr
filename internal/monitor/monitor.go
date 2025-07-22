@@ -2,7 +2,6 @@ package monitor
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"docker-server-mgr/internal/appctx"
@@ -10,23 +9,24 @@ import (
 	"docker-server-mgr/internal/dockerops/types"
 	"docker-server-mgr/internal/mysqlops"
 	"docker-server-mgr/utils"
+	clog "docker-server-mgr/utils/log" //custom log
 )
 
 func CheckDockerStatus(
 	ctx context.Context,
 	deps *appctx.Dependencies,
 ) {
-	log.Println("Starting Docker CheckDockerStatus...")
+	clog.Debug("Starting Docker CheckDockerStatus...")
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Docker Status watcher stopped.")
+			clog.Error("Docker Status watcher stopped.")
 			return
 		default:
 			containers, err := mysqlops.SelectQueryRowsToStructs[types.ContainerInfo](deps.MySQLClient, "SELECT id, status FROM containers WHERE deleted_at IS NULL or status != 'deleted'")
 			if err != nil {
-				log.Printf("Error fetching containers from MySQL: %v", err)
+				clog.Error("Error fetching containers from MySQL", "err", err)
 				time.Sleep(10 * time.Second)
 				continue
 			}
@@ -49,12 +49,12 @@ func CheckImageStatus(
 	ctx context.Context,
 	deps *appctx.Dependencies,
 ) {
-	log.Println("Starting Docker CheckImageStatus...")
+	clog.Debug("Starting Docker CheckImageStatus...")
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Docker Image Status watcher stopped.")
+			clog.Error("Docker Image Status watcher stopped.")
 			return
 		default:
 			dockerops.WatchImageUsingStatus(ctx, deps.DockerClient, deps.MySQLClient)

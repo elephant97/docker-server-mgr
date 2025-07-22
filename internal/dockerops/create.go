@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -12,6 +11,7 @@ import (
 	"github.com/docker/go-connections/nat"
 
 	"docker-server-mgr/internal/common/request"
+	clog "docker-server-mgr/utils/log" //custom log
 )
 
 func BuildPortConfig(portMappings []request.PortMapping) (nat.PortSet, nat.PortMap, error) {
@@ -50,7 +50,7 @@ func PrepareImage(cli *client.Client, ctx context.Context, image string) error {
 	}
 
 	if !imageExists {
-		log.Printf("Image %s not found locally. Pulling...", image)
+		clog.Debug("Image not found locally. Pulling...", "image", image)
 
 		reader, err := cli.ImagePull(ctx, image, types.ImagePullOptions{})
 		if err != nil {
@@ -58,7 +58,7 @@ func PrepareImage(cli *client.Client, ctx context.Context, image string) error {
 		}
 		defer reader.Close()
 		io.Copy(io.Discard, reader)
-		log.Printf("Image %s pulled successfully", image)
+		clog.Debug("Image pulled successfully", "image", image)
 	}
 
 	return nil

@@ -3,12 +3,12 @@ package redisops
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
-	"docker-server-mgr/config"
-
 	"github.com/redis/go-redis/v9"
+
+	"docker-server-mgr/config"
+	clog "docker-server-mgr/utils/log" //custom log
 )
 
 func NewRedisClient(redisConfig *config.DBConfig) *redis.Client {
@@ -22,9 +22,9 @@ func NewRedisClient(redisConfig *config.DBConfig) *redis.Client {
 	defer cancel()
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
-		log.Fatalf("❌ Redis 연결 실패: %v", err)
+		clog.Fatal("❌ Redis 연결 실패", "err", err)
 	}
 
-	log.Println("✅ Redis 연결 성공")
+	clog.Debug("✅ Redis 연결 성공")
 	return rdb
 }

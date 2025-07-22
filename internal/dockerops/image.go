@@ -3,12 +3,12 @@ package dockerops
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"log"
 	"strings"
 
 	shptypes "docker-server-mgr/internal/dockerops/types"
 	"docker-server-mgr/internal/mysqlops"
+
+	clog "docker-server-mgr/utils/log" //custom log
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -22,13 +22,13 @@ func WatchImageUsingStatus(
 
 	mapDbImage, err := getSavedImageInfo(mysqlClient)
 	if mapDbImage == nil {
-		log.Printf("getSavedImageInfo failed: %v", err)
+		clog.Error("getSavedImageInfo failed", "err", err)
 		panic(err)
 	}
 
 	containers, err := dockerClient.ContainerList(ctx, types.ContainerListOptions{All: true})
 	if err != nil {
-		log.Printf("Error listing containers: %v", err)
+		clog.Error("Error listing containers", "err", err)
 		panic(err)
 	}
 
@@ -39,19 +39,19 @@ func WatchImageUsingStatus(
 
 	images, err := dockerClient.ImageList(ctx, types.ImageListOptions{All: true})
 	if err != nil {
-		log.Printf("Error get ImageList: %v", err)
+		clog.Error("Error get ImageList", "err", err)
 		panic(err)
 	}
 
 	for _, img := range images {
 		if !usedImageIDs[img.ID] {
-			fmt.Printf("Deleting unused image: %s\n", img.ID[:20])
+			clog.Info("사용하지 않는 이미지 삭제처리", "imageID", img.ID[:20])
 			_, err := dockerClient.ImageRemove(ctx, img.ID, types.ImageRemoveOptions{
 				Force:         false,
 				PruneChildren: false,
 			})
-			if err != nil || img.RepoTags == nil {
-				fmt.Printf("⚠️ Failed to delete %s: %v\n", img.ID[:20], err)
+			if err != nil {
+				clog.Error("사용하지 않는 이미지 삭제에러 발생", "imageID", img.ID[:20], "err", err)
 			}
 
 			if mapDbImage[img.ID] == "" || mapDbImage[img.ID] != "deleted" {
@@ -71,7 +71,7 @@ func getSavedImageInfo(
 	dbImageList, err := mysqlops.SelectQueryRowsToStructs[shptypes.ImageStatus](mysqlClient,
 		"SELECT id, status FROM images")
 	if err != nil {
-		log.Printf("⚠️ Failed get Image Info in DB %v\n", err)
+		clog.Error("⚠️ Failed get Image Info in DB", "err", err)
 		return nil, err
 	}
 	imageMap := make(map[string]string)
@@ -95,6 +95,8 @@ func imageStatusUpdate(
 			imageName := parts[0]
 			imageTag := parts[1]
 			upsertImageStatus(mysqlClient, imageID, imageName, imageTag, status)
+		} else {
+			clog.Warn("repo Tag split count is over or lower then 2", "len", len(parts))
 		}
 	}
 }
@@ -106,7 +108,7 @@ func upsertImageStatus(
 	imageTag string,
 	status string,
 ) {
-	log.Printf("Updating image %s status to %s", imageID, status)
+	clog.Debug("Updating image %s status to %s", imageID, status)
 
 	_, err := mysqlops.ExecQuery(mysqlClient, `
     INSERT INTO images (id, status, name, tag, last_check_time)
@@ -117,8 +119,8 @@ func upsertImageStatus(
 		imageID, status, imageName, imageTag)
 
 	if err != nil {
-		log.Printf("Error upsert container status in MySQL: %v", err)
+		clog.Error("Error upsert container status in MySQL", "err", err)
 	} else {
-		log.Printf("Image %s status upsert to %s successfully", imageID, status)
+		clog.Debug("Image status upsert successfully", "imageId", imageID, "status", status)
 	}
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 
 	"docker-server-mgr/config"
 	"docker-server-mgr/internal/appctx"
@@ -12,26 +11,27 @@ import (
 	"docker-server-mgr/internal/redisops"
 	"docker-server-mgr/internal/server"
 	"docker-server-mgr/utils"
+	clog "docker-server-mgr/utils/log" //custom log
 )
 
 func main() {
 	ctx := context.Background()
 
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	clog.LogSet()
 
 	cfg, err := config.LoadConfig("config/config.yaml")
 	if err != nil {
-		log.Fatalf("설정 파일 로딩 실패: %v", err)
+		clog.Fatal("설정 파일 로딩 실패", "err", err)
 	}
 
 	dockerClient, err := dockerops.NewDockerClient()
 	if err != nil {
-		log.Fatalf("Docker client error: %v", err)
+		clog.Fatal("Docker client error", "err", err)
 	}
 
 	mysqlClient, err := mysqlops.MysqlConnection(&cfg.MySQL)
 	if err != nil {
-		log.Fatalf("MySQL client error: %v", err)
+		clog.Fatal("MySQL client error", "err", err)
 	}
 
 	redisClient := redisops.NewRedisClient(&cfg.Redis)
@@ -50,7 +50,7 @@ func main() {
 	// Redis docker container TTL 만료 감시 thread
 	utils.SafeGoRoutineCtx(ctx, func() {
 		redisops.SubscribeExpiredKeys(ctx, redisClient, func(containerID string) {
-			log.Printf("Expired container detached: %s\n", containerID)
+			clog.Info("Expired container detached", "containerID", containerID)
 			dockerops.RemoveContainer(ctx, deps, containerID)
 		})
 	})

@@ -15,6 +15,7 @@ import (
 	"docker-server-mgr/internal/dockerops"
 	"docker-server-mgr/internal/mysqlops"
 	"docker-server-mgr/internal/redisops"
+	clog "docker-server-mgr/utils/log" //custom log
 )
 
 func CreateHandler(deps *appctx.Dependencies) http.HandlerFunc {
@@ -22,14 +23,14 @@ func CreateHandler(deps *appctx.Dependencies) http.HandlerFunc {
 		var req request.CreateRequest
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			log.Printf("Validation request: %v", err)
+			clog.Error("Validation request", "err", err)
 			response.WriteResponse(w, http.StatusBadRequest, "Invalid request")
 			return
 		}
 
 		errdefs := validateCreateRequest(&req)
 		if errdefs.Code != 0 && errdefs.Code != int(errs.DefaultSet) {
-			log.Printf("Validation error: %v", errdefs.Message)
+			clog.Error("Validation error", "err", errdefs.Message)
 			response.WriteResponse(w, http.StatusBadRequest, errdefs.Message.Error())
 			return
 		}
@@ -46,7 +47,7 @@ func CreateHandler(deps *appctx.Dependencies) http.HandlerFunc {
 
 func validateCreateRequest(req *request.CreateRequest) errs.ErrorDetail {
 	if req.UserId == 0 {
-		log.Println("User ID is 0")
+		clog.Debug("User ID is 0")
 		return errs.ErrorDetail{
 			Code:    int(errs.Invaild),
 			Message: fmt.Errorf("user ID is required"),
@@ -56,7 +57,7 @@ func validateCreateRequest(req *request.CreateRequest) errs.ErrorDetail {
 	log.Println("Validating create request:", req.UserId)
 
 	if req.Image == "" {
-		log.Println("Image is 0")
+		clog.Debug("Image is 0")
 		return errs.ErrorDetail{
 			Code:    int(errs.Invaild),
 			Message: fmt.Errorf("image is required"),
@@ -64,7 +65,7 @@ func validateCreateRequest(req *request.CreateRequest) errs.ErrorDetail {
 	}
 
 	if req.ContainerName == "" {
-		log.Println("Container name is required")
+		clog.Error("Container name is required")
 		req.ContainerName = fmt.Sprintf("container-%d", time.Now().UnixNano())
 		return errs.ErrorDetail{
 			Code:    int(errs.DefaultSet),
@@ -101,7 +102,7 @@ func handleCreateRequest(
 		return "", http.StatusBadRequest, fmt.Errorf("create error[%s]: %w", containerID, err)
 	}
 
-	log.Printf("Container created: %s", containerID)
+	clog.Info("Container created", "containerID", containerID)
 
 	status, err := dockerops.GetContainerStatus(ctx, deps.DockerClient, containerID)
 	if err != nil {
@@ -149,7 +150,7 @@ func handleCreateRequest(
 		}
 	}
 
-	log.Printf("Container %s created and registered successfully", containerID)
+	clog.Info("Container created and registered successfully", "containerID", containerID)
 
 	return containerID, http.StatusOK, nil
 }
