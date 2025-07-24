@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"strings"
+	"time"
 
 	shptypes "docker-server-mgr/internal/dockerops/types"
 	"docker-server-mgr/internal/mysqlops"
@@ -44,7 +45,9 @@ func WatchImageUsingStatus(
 	}
 
 	for _, img := range images {
-		if !usedImageIDs[img.ID] {
+		timeSinceCreated := time.Since(time.Unix(img.Created, 0))
+		// 컨테이너에서 사용중이 아니면서 이미지 생성된지 1주일이 지났으면 사용하지 않는 것으로 간주하고 삭제처리
+		if !usedImageIDs[img.ID] && timeSinceCreated > 7*24*time.Hour {
 			clog.Info("사용하지 않는 이미지 삭제처리", "imageID", img.ID[:20])
 			_, err := dockerClient.ImageRemove(ctx, img.ID, types.ImageRemoveOptions{
 				Force:         false,
