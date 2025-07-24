@@ -54,17 +54,7 @@ func CheckImageStatus(
 	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 
-	// ✅ 첫 1시간 대기
-	clog.Info("Initial wait for 1 hour before first WatchImageUsingStatus run")
-	select {
-	case <-ctx.Done():
-		clog.Error("Docker Image Status watcher stopped before first execution.")
-		return
-	case <-ticker.C:
-		// 첫 실행 시점 도달
-	}
-
-	// ✅ 이후 1시간마다 실행
+	// 1시간마다 실행
 	for {
 		select {
 		case <-ctx.Done():
