@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -20,9 +21,18 @@ import (
 
 func CreateHandler(deps *appctx.Dependencies) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		go func() {
+			<-r.Context().Done()
+			clog.Warn("클라이언트가 요청을 취소했습니다", "err", r.Context().Err())
+		}()
+
 		var req request.CreateRequest
 
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		bodyReader := io.TeeReader(r.Body, log.Writer())
+		copy := bodyReader
+		clog.Info("create:", "body", copy)
+
+		if err := json.NewDecoder(bodyReader).Decode(&req); err != nil {
 			clog.Error("Validation request", "err", err)
 			response.WriteResponse(w, http.StatusBadRequest, "Invalid request")
 			return
@@ -35,7 +45,7 @@ func CreateHandler(deps *appctx.Dependencies) http.HandlerFunc {
 			return
 		}
 
-		containerID, status, err := handleCreateRequest(context.Background(), deps, req)
+		containerID, status, err := handleCreateRequest(r.Context(), deps, req)
 		if err != nil {
 			response.WriteResponse(w, status, err.Error())
 			return
@@ -93,6 +103,7 @@ func handleCreateRequest(
 	fullImage := fmt.Sprintf("%s:%s", req.Image, tag)
 
 	if err := dockerops.PrepareImage(deps.DockerClient, ctx, fullImage); err != nil {
+		clog.Error("Image Prepare Failed", "err", err)
 		return "", http.StatusBadRequest, fmt.Errorf("image prepare error: %w", err)
 	}
 
