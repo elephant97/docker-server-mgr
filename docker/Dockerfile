@@ -15,7 +15,7 @@ WORKDIR /app
 
 COPY --from=builder /app/docker-mgr .
 
-COPY --from=builder /app/config/config.yaml ./config/config.yaml
+COPY --from=builder /app/config/config-operation.yaml ./config/config.yaml
 
 EXPOSE 8082
 
