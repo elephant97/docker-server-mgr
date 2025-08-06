@@ -10,6 +10,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 
+	"docker-server-mgr/config"
 	"docker-server-mgr/internal/common/request"
 	clog "docker-server-mgr/utils/log" //custom log
 )
@@ -51,8 +52,10 @@ func PrepareImage(cli *client.Client, ctx context.Context, image string) error {
 
 	if !imageExists {
 		clog.Debug("Image not found locally. Pulling...", "image", image)
-
-		reader, err := cli.ImagePull(ctx, image, types.ImagePullOptions{})
+		dockerAuth := config.GetDockerAuth()
+		reader, err := cli.ImagePull(ctx, image, types.ImagePullOptions{
+			RegistryAuth: dockerAuth,
+		})
 		if err != nil {
 			return fmt.Errorf("failed to pull image: %w", err)
 		}
@@ -80,6 +83,7 @@ func CreateContainer(
 			Image:        image,
 			Cmd:          req.Cmd,
 			ExposedPorts: exposed,
+			Env:          req.Env,
 		},
 		&container.HostConfig{
 			PortBindings: bindings,

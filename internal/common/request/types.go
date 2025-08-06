@@ -14,6 +14,7 @@ type CreateRequest struct {
 	Ports         []PortMapping `json:"ports"`   // 포트 매핑 정보
 	TTL           int           `json:"ttl"`     // 단위: 초
 	Volumes       []string      `json:"volumes"` // 호스트 디렉토리 바인딩
+	Env           []string      `json:"envs"`    // 환경 변수
 }
 
 type DeleteRequest struct {
